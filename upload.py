@@ -1,5 +1,6 @@
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import AuthorizedSession
+from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 import json
 import os.path
@@ -38,8 +39,8 @@ def get_authorized_session(auth_token_file):
             'https://www.googleapis.com/auth/photoslibrary.sharing']
 
     cred = None
-
-    if auth_token_file:
+    
+    if os.path.exists(auth_token_file):
         try:
             cred = Credentials.from_authorized_user_file(auth_token_file, scopes)
         except OSError as err:
@@ -47,9 +48,12 @@ def get_authorized_session(auth_token_file):
         except ValueError:
             logging.debug("Error loading auth tokens - Incorrect format")
 
+    if not cred or not cred.valid:
+        if cred and cred.expired and cred.refresh_token:
+            cred.refresh(Request())
+        else:
+            cred = auth(scopes)
 
-    if not cred:
-        cred = auth(scopes)
 
     session = AuthorizedSession(cred)
 
